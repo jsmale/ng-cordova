@@ -2,10 +2,24 @@ angular.module("ngCordova.plugins.oauthUtility", [])
 
   .factory('$cordovaOauthUtility', ['$q', function ($q) {
 
+    var percentEncode = function(uriComponent){
+      var replacer = function(match){
+        return "%" + match.charCodeAt(0).toString(16).toUpperCase();
+      };
+      return encodeURIComponent(uriComponent).replace(/[^A-Za-z0-9\-\._~%]/g, replacer);
+    };
+
     return {
+      /*
+       * Method to encode parameters according to RFC 3986, Section 2.1.
+       *
+       * @param   string uriComponent
+       * @return  string encoded output
+       */
+      percentEncode: percentEncode,
 
       /*
-       * Sign an Oauth 1.0 request
+       * Sign an Oauth 1.0a request
        *
        * @param    string method
        * @param    string endPoint
@@ -19,25 +33,25 @@ angular.module("ngCordova.plugins.oauthUtility", [])
           var headerAndBodyParameters = angular.copy(headerParameters);
           var bodyParameterKeys = Object.keys(bodyParameters);
           for (var i = 0; i < bodyParameterKeys.length; i++) {
-            headerAndBodyParameters[bodyParameterKeys[i]] = encodeURIComponent(bodyParameters[bodyParameterKeys[i]]);
+            headerAndBodyParameters[bodyParameterKeys[i]] = percentEncode(bodyParameters[bodyParameterKeys[i]]);
           }
-          var signatureBaseString = method + "&" + encodeURIComponent(endPoint) + "&";
+          var signatureBaseString = method + "&" + percentEncode(endPoint) + "&";
           var headerAndBodyParameterKeys = (Object.keys(headerAndBodyParameters)).sort();
           for (i = 0; i < headerAndBodyParameterKeys.length; i++) {
             if (i == headerAndBodyParameterKeys.length - 1) {
-              signatureBaseString += encodeURIComponent(headerAndBodyParameterKeys[i] + "=" + headerAndBodyParameters[headerAndBodyParameterKeys[i]]);
+              signatureBaseString += percentEncode(headerAndBodyParameterKeys[i] + "=" + headerAndBodyParameters[headerAndBodyParameterKeys[i]]);
             } else {
-              signatureBaseString += encodeURIComponent(headerAndBodyParameterKeys[i] + "=" + headerAndBodyParameters[headerAndBodyParameterKeys[i]] + "&");
+              signatureBaseString += percentEncode(headerAndBodyParameterKeys[i] + "=" + headerAndBodyParameters[headerAndBodyParameterKeys[i]] + "&");
             }
           }
           var oauthSignatureObject = new jsSHA(signatureBaseString, "TEXT");
 
           var encodedTokenSecret = '';
           if (tokenSecret) {
-            encodedTokenSecret = encodeURIComponent(tokenSecret);
+            encodedTokenSecret = percentEncode(tokenSecret);
           }
 
-          headerParameters.oauth_signature = encodeURIComponent(oauthSignatureObject.getHMAC(encodeURIComponent(secretKey) + "&" + encodedTokenSecret, "TEXT", "SHA-1", "B64"));
+          headerParameters.oauth_signature = percentEncode(oauthSignatureObject.getHMAC(percentEncode(secretKey) + "&" + encodedTokenSecret, "TEXT", "SHA-1", "B64"));
           var headerParameterKeys = Object.keys(headerParameters);
           var authorizationHeader = 'OAuth ';
           for (i = 0; i < headerParameterKeys.length; i++) {
